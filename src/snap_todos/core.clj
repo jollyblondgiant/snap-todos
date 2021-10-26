@@ -19,6 +19,7 @@
     "/incomplete-todo" (routes/incomplete-todo request)
     "/forget-todo" (routes/forget-todo request)
     "/add-todo" (routes/add-todo request)
+    "/graph" (routes/todo-chart request)
     (ring.util.response/not-found)))
 
 (defn -main

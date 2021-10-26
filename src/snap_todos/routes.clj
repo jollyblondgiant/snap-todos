@@ -1,5 +1,6 @@
 (ns snap-todos.routes
   (:require [snap-todos.todos :as todos]
+            [snap-todos.graph :refer [task-graph]]
             [clojure.string :refer [join]]))
 
 (defn login
@@ -36,17 +37,19 @@
     (ring.util.response/response
      "please login at /login?user={email@domain.eg}")))
 
+(def nav
+  '("<a href='/logout'>log out</a>" "|"
+    "<a href='/'>home</a>"          "<br/>"
+    "<span>add new todo by navigating to "
+    "localhost:3000/add-todo?todo={description}</span>")
+  )
+
 (defn dones
   ""
   [{route :uri params :params
     :as request}]
   (if-let [user (-> request :cookies (get "user") :value)]
-    (let [nav
-          '("<a href='/logout'>log out</a>" "|"
-            "<a href='/'>home</a>"          "<br/>"
-            "<span>add new todo by navigating to "
-            "localhost:3000/add-todo?todo={description}</span>")
-          todos (todos/get-dones-by-user user)
+    (let [todos (todos/get-dones-by-user user)
           todo (fn [[label id]]
                  (str "<span>" label  "</span>"
                       " <a href='/incomplete-todo?id=" id
@@ -60,17 +63,13 @@
     (ring.util.response/response
      "please login at /login?user={email@domain.eg}")))
 
+
 (defn todos
   ""
   [{route :uri params :params
               :as request}]
   (if-let [user (-> request :cookies (get "user") :value)]
-    (let [nav
-          '("<a href='/logout'>log out</a>" "|"
-            "<a href='/'>home</a>"          "<br/>"
-            "<span>add new todo by navigating to "
-            "localhost:3000/add-todo?todo={description}</span>")
-          todos (todos/get-todos-by-user user)
+    (let [todos (todos/get-todos-by-user user)
           todo (fn [[label id]]
                  (str "<span>" label  "</span>"
                       " <a href='/complete-todo?id=" id
@@ -127,5 +126,25 @@
     (let [description (get params "todo")]
       (todos/add-new-todo user description)
       (ring.util.response/redirect "/todos"))
+    (ring.util.response/response
+     "please login at /login?user={email@domain.eg}")))
+
+(defn todo-chart
+  ""
+  [{route :uri params :params
+    :as request}]
+  (if-let [user (-> request :cookies (get "user") :value)]
+    (let [chart (-> user todos/tx-graph-for-user)
+          row (fn [[time count]]
+               (-> "<tr><td>%s</td><td>%s</td></tr>"
+                   (format time count)))
+          table ( )]
+      (-> (ring.util.response/response
+           (->> chart
+                (map row) join
+                (format
+                 "<table><tr>Transaction<th></th>Tasks<th></th></tr>%s</table>" )
+                (str (join nav))))
+          (ring.util.response/content-type "text/html")))
     (ring.util.response/response
      "please login at /login?user={email@domain.eg}")))
