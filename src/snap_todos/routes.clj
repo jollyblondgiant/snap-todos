@@ -112,13 +112,8 @@
     :as request}]
   (if-let [user (-> request :cookies (get "user") :value)]
     (let [id (get params "id")]
-      (println "snap-todos.routes/forget-todo id" id)
       (-> id
           todos/get-todo ffirst
-          ((fn [todo]
-             (println "snap-todos.routes/forget-todo todo" todo)
-             (println "snap-todos.routes/forget-todo class" (class todo))
-             todo))
           todos/remove-todo )
       (ring.util.response/redirect "/todos"))
     (ring.util.response/response

@@ -65,7 +65,7 @@
   [user description]
   (->> [{:todo/creator user
          :todo/description description
-         :todo/id (d/squuid)
+         :todo/id (str (d/squuid))
          :todo/complete false}]
        (d/transact conn)))
 
