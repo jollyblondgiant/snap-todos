@@ -28,10 +28,35 @@
     (-> (str "logged in as user: " user "<br/>"
              "available actions:" "<br/>"
              "<a href='/todos'>get-todos</a>" "<br/>"
+             "<a href='/dones'>completed-todos</a>" "<br/>"
              "<a href='/graph'>view-graph</a>" "<br/>"
              "<a href='/logout'>logout</a>" )
         ring.util.response/response
         (ring.util.response/content-type "text/html"))
+    (ring.util.response/response
+     "please login at /login?user={email@domain.eg}")))
+
+(defn dones
+  ""
+  [{route :uri params :params
+    :as request}]
+  (if-let [user (-> request :cookies (get "user") :value)]
+    (let [nav
+          '("<a href='/logout'>log out</a>" "|"
+            "<a href='/'>home</a>"          "<br/>"
+            "<span>add new todo by navigating to "
+            "localhost:3000/add-todo?todo={description}</span>")
+          todos (todos/get-dones-by-user user)
+          todo (fn [[label id]]
+                 (str "<span>" label  "</span>"
+                      " <a href='/incomplete-todo?id=" id
+                      "'>mark as incomplete</a> "
+                      " <a href='/forget-todo?id=" id
+                      "'>forget task</a> "
+                      "<br/>"))]
+      (-> (ring.util.response/response
+           (->> todos (map todo) (into nav) join))
+          (ring.util.response/content-type "text/html")))
     (ring.util.response/response
      "please login at /login?user={email@domain.eg}")))
 
@@ -70,13 +95,31 @@
     (ring.util.response/response
      "please login at /login?user={email@domain.eg}")))
 
+(defn incomplete-todo
+  ""
+  [{route :uri params :params
+    :as request}]
+  (if-let [user (-> request :cookies (get "user") :value)]
+    (let [id (get params "id")]
+      (todos/incomplete-todo id)
+      (ring.util.response/redirect "/dones"))
+    (ring.util.response/response
+     "please login at /login?user={email@domain.eg}")))
+
 (defn forget-todo
   ""
   [{route :uri params :params
     :as request}]
   (if-let [user (-> request :cookies (get "user") :value)]
     (let [id (get params "id")]
-      (todos/remove-todo id)
+      (println "snap-todos.routes/forget-todo id" id)
+      (-> id
+          todos/get-todo ffirst
+          ((fn [todo]
+             (println "snap-todos.routes/forget-todo todo" todo)
+             (println "snap-todos.routes/forget-todo class" (class todo))
+             todo))
+          todos/remove-todo )
       (ring.util.response/redirect "/todos"))
     (ring.util.response/response
      "please login at /login?user={email@domain.eg}")))

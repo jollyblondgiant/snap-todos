@@ -16,7 +16,8 @@
                    :db/cardinality :db.cardinality/one
                    :db/doc "whether the todo is complete"}
                   {:db/ident :todo/id
-                   :db/valueType :db.type/uuid
+                   :db/valueType :db.type/string
+                   :db/unique :db.unique/identity
                    :db/cardinality :db.cardinality/one
                    :db/doc "for updating or deleting tasks"
                    }])
@@ -24,33 +25,33 @@
 
 (def default-todos [{:todo/description "set up http server"
                      :todo/complete true
-                     :todo/id (d/squuid)
+                     :todo/id (str (d/squuid))
                      :todo/creator "andy@apogenius.com"}
                     {:todo/description "create CRUD ops on todos"
                      :todo/complete true
-                     :todo/id (d/squuid)
+                     :todo/id (str (d/squuid))
                      :todo/creator "andy@apogenius.com"}
                     {:todo/description "setup user login"
                      :todo/complete true
-                     :todo/id (d/squuid)
+                     :todo/id (str (d/squuid))
                      :todo/creator "andy@apogenius.com"}
                     {:todo/description
                      "create graphing for todos"
                      :todo/complete false
-                     :todo/id (d/squuid)
+                     :todo/id (str (d/squuid))
                      :todo/creator "andy@apogenius.com"}
                     {:todo/description "create login query"
                      :todo/complete true
-                     :todo/id (d/squuid)
+                     :todo/id (str (d/squuid))
                      :todo/creator "andy@apogenius.com"}
                     {:todo/description "create logout query"
                      :todo/complete true
-                     :todo/id (d/squuid)
+                     :todo/id (str (d/squuid))
                      :todo/creator "andy@apogenius.com"}
                     {:todo/description
                      "write really good documentation"
                      :todo/creator "andy@apogenius.com"
-                     :todo/id (d/squuid)
+                     :todo/id (str (d/squuid))
                      :todo/complete false}])
 
 (d/create-database db-uri)
@@ -70,28 +71,57 @@
 
 (defn remove-todo
   ""
-  [uuid]
-  (->> [:db/retractEntity [:todo/id uuid]]
+  [task]
+  (->> [[:db/retractEntity task]]
        (d/transact conn)))
 
 (defn complete-todo
   ""
-  [uuid]
-  (->> [{:db/id [:todo/id uuid]
+  [task]
+  (->> [{:db/id [:todo/id task]
          :todo/complete true}]
+       (d/transact conn)))
+
+(defn incomplete-todo
+  ""
+  [task]
+  (->> [{:db/id [:todo/id task]
+         :todo/complete false}]
        (d/transact conn)))
 
 (defn get-todos-by-user
   ""
   [user]
-  (d/q '[:find ?description ?todo
+  (d/q '[:find ?description ?id
          :in $ ?user
          :where [?todo :todo/creator ?user]
          [?todo :todo/complete false]
+         [?todo :todo/id ?id]
          [?todo :todo/description ?description]]
        (d/db conn)
        user))
 
+(defn get-dones-by-user
+  ""
+  [user]
+  (-> '[:find ?description ?id
+        :in $ ?user
+        :where [?todo :todo/creator ?user]
+        [?todo :todo/complete true]
+        [?todo :todo/id ?id]
+        [?todo :todo/description ?description]]
+      (d/q (d/db conn) user)))
+
+(defn get-todo
+  ""
+  [uuid]
+  (d/q
+   '[:find ?task
+     :in $ ?uuid
+     :where
+     [?task :todo/id ?uuid]]
+   (d/db conn)
+   uuid))
 
 (defn get-todos
   ""
