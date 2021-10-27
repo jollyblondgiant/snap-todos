@@ -4,7 +4,9 @@
             [clojure.string :refer [join]]))
 
 (defn login
-  ""
+  "validates email
+  and adds username cookie
+  then redirects home"
   [{route :uri params :params
     :as request}]
   (let [email #"[a-zA-z0-9+_.-]+@[a-zA-Z0-9]+.[a-z]+"]
@@ -15,14 +17,18 @@
       (ring.util.response/bad-request))))
 
 (defn logout
-  ""
+  "prints cheerful message
+  and resets user's cookie store
+  thanks for todoing!"
   [request]
   (->
    (ring.util.response/response "successfully logged out!")
    (ring.util.response/set-cookie "user" "logout" {:max-age 0})))
 
 (defn home
-  ""
+  "checks user cookies
+  and returns api links
+  in html"
   [{route :uri params :params
     :as request}]
   (if-let [user (-> request :cookies (get "user") :value)]
@@ -30,7 +36,8 @@
              "available actions:" "<br/>"
              "<a href='/todos'>get-todos</a>" "<br/>"
              "<a href='/dones'>completed-todos</a>" "<br/>"
-             "<a href='/graph'>view-graph</a>" "<br/>"
+             "<a href='/graph'>task burndown</a>" "<br/>"
+             "<a href='/chart'>burndown (visualized)</a></br>"
              "<a href='/logout'>logout</a>" )
         ring.util.response/response
         (ring.util.response/content-type "text/html"))
@@ -45,7 +52,9 @@
   )
 
 (defn dones
-  ""
+  "gets completed tasks
+  and returns html
+  with tasks and actions"
   [{route :uri params :params
     :as request}]
   (if-let [user (-> request :cookies (get "user") :value)]
@@ -65,7 +74,9 @@
 
 
 (defn todos
-  ""
+  "gets incomplete tasks
+  and returns html
+  with tasks and actions"
   [{route :uri params :params
               :as request}]
   (if-let [user (-> request :cookies (get "user") :value)]
@@ -84,7 +95,9 @@
      "please login at /login?user={email@domain.eg}")))
 
 (defn complete-todo
-  ""
+  "sends assert request
+  marking todo as complete
+  and then redirects"
   [{route :uri params :params
     :as request}]
   (if-let [user (-> request :cookies (get "user") :value)]
@@ -95,7 +108,9 @@
      "please login at /login?user={email@domain.eg}")))
 
 (defn incomplete-todo
-  ""
+  "sends assert request
+  marking task as incomplete
+  and then redirects"
   [{route :uri params :params
     :as request}]
   (if-let [user (-> request :cookies (get "user") :value)]
@@ -106,7 +121,9 @@
      "please login at /login?user={email@domain.eg}")))
 
 (defn forget-todo
-  ""
+  "sends retract request
+  removing task completely
+  and then redirects"
   [{route :uri params :params
     :as request}]
   (if-let [user (-> request :cookies (get "user") :value)]
@@ -119,9 +136,10 @@
      "please login at /login?user={email@domain.eg}")))
 
 (defn add-todo
-  ""
-  [{route :uri params :params
-    :as request}]
+  "takes description string
+   makes assert request with it
+  and then redirects"
+  [{route :uri params :params:as request}]
   (if-let [user (-> request :cookies (get "user") :value)]
     (let [description (get params "todo")]
       (todos/add-new-todo user description)
@@ -130,15 +148,16 @@
      "please login at /login?user={email@domain.eg}")))
 
 (defn todo-chart
-  ""
+  "gets task history
+  and formats it to table
+  in html"
   [{route :uri params :params
     :as request}]
   (if-let [user (-> request :cookies (get "user") :value)]
-    (let [chart (-> user todos/tx-graph-for-user)
+    (let [chart (todos/tx-graph-for-user user)
           row (fn [[time count]]
                (-> "<tr><td>%s</td><td>%s</td></tr>"
-                   (format time count)))
-          table ( )]
+                   (format time count)))]
       (-> (ring.util.response/response
            (->> chart
                 (map row) join
@@ -146,5 +165,18 @@
                  "<table><tr>Transaction<th></th>Tasks<th></th></tr>%s</table>" )
                 (str (join nav))))
           (ring.util.response/content-type "text/html")))
+    (ring.util.response/response
+     "please login at /login?user={email@domain.eg}")))
+
+(defn todo-graph
+  "gets task history
+  and sends to task-graph to be
+  rendered in new tab"
+  [{route :uri params :params
+    :as request}]
+  (if-let [user (-> request :cookies (get "user") :value)]
+    (let [chart (todos/tx-graph-for-user user)]
+      (task-graph chart)
+      (ring.util.response/redirect "/"))
     (ring.util.response/response
      "please login at /login?user={email@domain.eg}")))

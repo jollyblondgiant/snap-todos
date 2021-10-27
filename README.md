@@ -1,10 +1,19 @@
 # snap-todos
 
-A Clojure library designed to ... well, that part is up to you.
+A simple clojure webserver that leverages datomic to keep track of todos.
 
 ## Usage
 
-FIXME
+ensure that datomic (dev-local) is installed on your machine, along the
+usual rogue's gallery of lein, java, and clojure.
+
+clone this code then
+$ cd snap-todos
+$ lein run
+
+Open a browser window and navigate to 127.0.0.1:3000
+follow onscreen prompts to view, add, complete, or forget todos.
+
 
 ## License
 

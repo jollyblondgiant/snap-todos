@@ -54,6 +54,7 @@
                      :todo/id (str (d/squuid))
                      :todo/complete false}])
 
+
 (d/create-database db-uri)
 (defonce conn (d/connect db-uri))
 (map (fn [tx] @(d/transact conn tx)) [todo-schema default-todos])
@@ -61,7 +62,9 @@
 @(d/transact conn default-todos)
 
 (defn add-new-todo
-  ""
+  "asserts new todo
+  based on input from client
+  default: incomplete"
   [user description]
   (->> [{:todo/creator user
          :todo/description description
@@ -70,27 +73,35 @@
        (d/transact conn)))
 
 (defn remove-todo
-  ""
+  "issues a retract
+  to delete tasks and preserve
+  db of record"
   [task]
   (->> [[:db/retractEntity task]]
        (d/transact conn)))
 
 (defn complete-todo
-  ""
+  "issues an assert
+  updating task to complete
+  be at ease, todo"
   [task]
   (->> [{:db/id [:todo/id task]
          :todo/complete true}]
        (d/transact conn)))
 
 (defn incomplete-todo
-  ""
+  "issues an assert
+  reverting task incomplete
+  back to work, todo"
   [task]
   (->> [{:db/id [:todo/id task]
          :todo/complete false}]
        (d/transact conn)))
 
 (defn get-todos-by-user
-  ""
+  "finds incomplete tasks
+  that were created by the
+  logged-in user's name"
   [user]
   (d/q '[:find ?description ?id
          :in $ ?user
@@ -102,7 +113,9 @@
        user))
 
 (defn get-dones-by-user
-  ""
+  "finds completed tasks
+  that were created by the
+  logged-in user's name"
   [user]
   (-> '[:find ?description ?id
         :in $ ?user
@@ -113,7 +126,9 @@
       (d/q (d/db conn) user)))
 
 (defn get-todo
-  ""
+  "takes an id string
+  and returns a task id
+  for use in retracts"
   [uuid]
   (d/q
    '[:find ?task
@@ -124,7 +139,10 @@
    uuid))
 
 (defn get-todos
-  ""
+  "this one gets all tasks,
+  regardless of creator.
+  aren't we curious?
+  "
   []
   (d/q
    '[:find ?description
@@ -133,7 +151,9 @@
 
 
 (defn get-completed-todos
-  ""
+  "get all complete tasks,
+  regardless of creator
+  an edge case, surely."
   []
   (d/q
    '[:find ?description
@@ -142,7 +162,9 @@
      [?todo :todo/description ?description]]))
 
 (defn get-completed-todos-by-user
-  ""
+  "gets all complete tasks
+  which the currently logged-in
+  user created"
   [user]
   (d/q
    '[:find ?description
@@ -154,7 +176,11 @@
    user)
   )
 
-(defn tx-history []
+(defn tx-history
+  "gets tx-ids
+  of task-related asserts
+  for todo-snapshot"
+  []
   (d/q
    '[:find ?tx
      :where
@@ -162,6 +188,9 @@
    (d/db conn)))
 
 (defn todo-snapshot
+  "get incomplete tasks
+  at a given point in time
+  for todo-burndown"
   [user tx]
   (d/q
    '[:find ?description
@@ -172,7 +201,11 @@
    (d/as-of (d/db conn) tx)
    user))
 
-(defn tx-graph-for-user [user]
+(defn tx-graph-for-user
+  "helper function formats
+  todo-snapshot list into
+  vector for graphing"
+  [user]
   (->> (tx-history)
        (map (fn [txs]
               (first txs)))
@@ -183,7 +216,11 @@
                ) []
         )))
 
-(defn todo-history [user]
+(defn todo-history
+  "finds complete todo
+  history for a user
+  with tx info"
+  [user]
   (d/q
    '[:find ?description ?complete ?tx ?op
      :in $ ?user

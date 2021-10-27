@@ -1,18 +1,13 @@
 (ns snap-todos.graph
-  (:require [oz.core :as oz]))
+  (:require [com.hypirion.clj-xchart :as c]))
 
-;;https://github.com/metasoarous/oz
+
 (defn task-graph
-  ""
+  "plots todos and time
+  in an image that opens
+  in its own window"
   [tasks]
-  (oz/view! {:data {:values
-                    (->> tasks
-                         (map (fn [[tx tasks]]
-                                {:time tx :quantity tasks})))}
-             :encoding {:x {:field "time" :type "quantitative"}
-                        :y {:field "tasks" :type "quantitative"}}
-             :mark "line"}))
-
-(comment
-  (oz/start-server!)
-  (oz/view! line-plot))
+  (-> {"Tasks" [(-> tasks count range)
+                (map last tasks)]}
+      c/xy-chart
+      c/view))
