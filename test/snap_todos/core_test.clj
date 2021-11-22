@@ -1,6 +1,6 @@
-(ns snap-todos.core-test
+(ns datomic-todos.core-test
   (:require [clojure.test :refer :all]
-            [snap-todos.core :refer :all]))
+            [datomic-todos.core :refer :all]))
 
 (deftest a-test
   (testing "FIXME, I fail."
